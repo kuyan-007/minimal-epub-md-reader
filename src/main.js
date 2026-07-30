@@ -566,14 +566,19 @@ function renderChapter(order) {
 					}
 				}
 
-				// 进度保存：当前位置 / 总可滚距离
+				// 进度：当前位置 / 总可滚距离
 				const maxScroll = totalH - viewH;
 				const ratio = maxScroll > 0 ? st / maxScroll : 0;
+				const clamped = Math.min(1, Math.max(0, ratio));
+				// 实时更新右上角百分比（DOM 写入很轻，没必要防抖）
+				if (clamped !== state.scrollPercent) {
+					state.scrollPercent = clamped;
+					updateBookProgress();
+				}
+				// 落盘防抖：避免每帧写一次进度
 				clearTimeout(saveTimer);
 				saveTimer = setTimeout(() => {
-					state.scrollPercent = Math.min(1, Math.max(0, ratio));
 					saveProgress();
-					updateBookProgress();
 				}, 1500);
 
 				// 离开底屏就解除武装，下次到底要重新连续滚两次

@@ -98,6 +98,24 @@ pub fn run() {
                 })
                 .build(app)?;
 
+            // 4. 窗口初始尺寸/位置：宽 = 屏宽/3，高 = 屏高/2，居中
+            //    - 物理像素；set_size 后 set_position 重新居中
+            //    - 宽 < minWidth 时顶到 minWidth（保证可读）
+            if let Some(window) = app.get_webview_window("main") {
+                if let Ok(Some(monitor)) = app.primary_monitor() {
+                    use tauri::{PhysicalPosition, PhysicalSize, Position, Size};
+                    let screen = monitor.size();
+                    let min_w: u32 = 400;
+                    let win_w = (screen.width / 3).max(min_w);
+                    let win_h = screen.height / 2;
+                    let x = ((screen.width as i32) - (win_w as i32)) / 2;
+                    let y = ((screen.height as i32) - (win_h as i32)) / 2;
+                    let _ = window.set_size(Size::Physical(PhysicalSize::new(win_w, win_h)));
+                    let _ =
+                        window.set_position(Position::Physical(PhysicalPosition::new(x, y)));
+                }
+            }
+
             Ok(())
         })
         // 将外部文件拖进窗口：
@@ -114,7 +132,7 @@ pub fn run() {
 				for path in paths {
 					if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
 						if ext.eq_ignore_ascii_case("epub") || ext.eq_ignore_ascii_case("md") {
-							commands::enqueue_pending_file(window.app_handle(), &path);
+							commands::enqueue_pending_file(window.app_handle(), path);
 							break;
 						}
 					}

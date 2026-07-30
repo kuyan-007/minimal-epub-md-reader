@@ -144,10 +144,3 @@ fn infer_mime(path: &str) -> &'static str {
     }
 }
 
-fn md5_like(s: &str) -> u64 {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-    let mut h = DefaultHasher::new();
-    s.hash(&mut h);
-    h.finish()
-}

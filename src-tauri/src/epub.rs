@@ -190,7 +190,7 @@ pub fn open(path_str: &str) -> Result<BookInfo, String> {
             href: current_path.to_string_lossy().to_string(),
             html: html.clone(),
             base_href,
-            is_cover: cover_path.as_ref().map_or(false, |cp| {
+            is_cover: cover_path.as_ref().is_some_and(|cp| {
                 let cp_str = cp.to_string_lossy().to_ascii_lowercase();
                 html.to_ascii_lowercase().contains(&cp_str)
             }),

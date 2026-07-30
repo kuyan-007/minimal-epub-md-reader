@@ -103,11 +103,11 @@ body {
 }
 
 /* 右上角全书阅读进度 */
-/* 右上角格式徽标 */
+/* 右上角格式徽标（让位给阅读进度，自身靠左） */
 .format-badge {
 	position: fixed;
 	top: 16px;
-	right: 16px;
+	right: 92px;
 	padding: 2px 8px;
 	border-radius: 10px;
 	font-size: 10px;
@@ -134,11 +134,11 @@ body {
 	color: #fff;
 }
 
-/* 全书阅读进度，放在格式徽标左边 */
+/* 全书阅读进度：贴在右上角边缘 */
 .book-progress {
 	position: fixed;
 	top: 16px;
-	right: 92px;
+	right: 16px;
 	padding: 2px 10px;
 	border-radius: 12px;
 	background: var(--bg-overlay);

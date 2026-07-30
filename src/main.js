@@ -142,7 +142,7 @@ function toggleToc(show) {
 	if (shouldShow) {
 		els.toc.classList.remove("hidden");
 		const active = els.tocList.querySelector(".toc-item.active");
-		if (active) active.scrollIntoView({ block: "center", behavior: "smooth" });
+		if (active) active.scrollIntoView({ block: "start", behavior: "smooth" });
 	} else {
 		els.toc.classList.add("hidden");
 	}
@@ -155,23 +155,23 @@ function buildChapterSrcdoc(chapter) {
 	// base href 用于解析相对路径
 	let html = chapter.html;
 
-	// 确保有 doctype / html 包裹
+	// 剥离 XML 声明（<?xml ...?>），否则 srcdoc 进入 quirks 模式
+	html = html.replace(/^\s*<\?xml[^>]*\?>\s*/i, "");
+
+	// 确保有 doctype + html 包裹
 	if (!/<html[\s>]/i.test(html)) {
 		html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${html}</body></html>`;
+	} else if (!/<!DOCTYPE\s+html/i.test(html)) {
+		// 有 <html> 但无 doctype（如 XHTML），强行补上
+		html = "<!DOCTYPE html>\n" + html;
 	}
 
 	// 注入 CSS（在 head 末尾追加）
-	const baseHref = chapter.base_href
-		? `file:///${chapter.base_href.replace(/\\/g, "/")}/`
-		: "";
 	if (state.globalCss) {
 		html = html.replace(
 			/<\/head>/i,
 			`<style>${state.globalCss}</style></head>`,
 		);
-	}
-	if (baseHref) {
-		html = html.replace(/<head([^>]*)>/i, `<head$1><base href="${baseHref}">`);
 	}
 
 	// 把章节内容包到 <div class="chapter-body">。
@@ -220,6 +220,7 @@ function renderChapter(order) {
 			if (!doc) return;
 			state.currentDoc = doc;
 			const root = doc.documentElement;
+			const scrollEl = doc.scrollingElement || root;
 
 			// 处理图片
 			const imgs = Array.from(doc.querySelectorAll("img"));
@@ -259,20 +260,26 @@ function renderChapter(order) {
 				}
 				styleEl.textContent = `
 					/* 不设 height，让 html/body 自然延伸。
-					   overflow-y: auto 在 html 上建立滚动容器。 */
+					   滚动容器仅限 html，body 不参与滚动。 */
 					html {
 						overflow-y: auto;
 						overflow-x: hidden;
-						scrollbar-width: none;
 					}
 					body {
 						margin: 0;
 						padding: 0;
 						background: var(--bg-frame);
 						color: var(--text);
+						user-select: text;
+						-webkit-user-select: text;
+						overflow: visible;
 					}
-					html::-webkit-scrollbar {
-						display: none;
+					/* 双端隐藏滚动条，以我们的规则为准 */
+					html, body {
+						scrollbar-width: none !important;
+					}
+					html::-webkit-scrollbar, body::-webkit-scrollbar {
+						display: none !important;
 					}
 					.chapter-body {
 						padding: 24px 32px;
@@ -293,9 +300,9 @@ function renderChapter(order) {
 
 			// 恢复进度：按比例设 scrollTop
 			if (state.pendingScroll != null) {
-				const maxH = root.scrollHeight - root.clientHeight;
+				const maxH = scrollEl.scrollHeight - scrollEl.clientHeight;
 				if (maxH > 0) {
-					root.scrollTop = maxH * state.pendingScroll;
+					scrollEl.scrollTop = maxH * state.pendingScroll;
 				}
 				state.pendingScroll = null;
 			}
@@ -314,9 +321,9 @@ function renderChapter(order) {
 			doc.addEventListener("scroll", () => {
 				recomputePagination();
 
-				const st = root.scrollTop;
-				const totalH = root.scrollHeight;
-				const viewH = root.clientHeight;
+				const st = scrollEl.scrollTop;
+				const totalH = scrollEl.scrollHeight;
+				const viewH = scrollEl.clientHeight;
 
 				// 进度保存：当前位置 / 总可滚距离
 				const maxScroll = totalH - viewH;
@@ -338,10 +345,9 @@ function renderChapter(order) {
 			doc.addEventListener(
 				"wheel",
 				(e) => {
-					e.preventDefault();
-
-					// Ctrl + 滚轮：字体大小缩放（步长 2px，范围 10-32）
+					// Ctrl + 滚轮：字体大小缩放（步长 2px，范围 10-32，完全拦截）
 					if (e.ctrlKey) {
+						e.preventDefault();
 						const step = 2;
 						const newFs = Math.max(
 							10,
@@ -355,11 +361,12 @@ function renderChapter(order) {
 						return;
 					}
 
+					// 正常滚轮：不拦截，让浏览器原生行级滚动（≈10 行/次）
+					// 仅检测顶/底边界，用于翻章
 					if (Math.abs(e.deltaY) < 1) return;
 					const direction = e.deltaY > 0 ? 1 : -1;
-					const viewH = root.clientHeight;
-					const current = root.scrollTop;
-					const maxScroll = root.scrollHeight - viewH;
+					const current = scrollEl.scrollTop;
+					const maxScroll = scrollEl.scrollHeight - scrollEl.clientHeight;
 
 					if (direction > 0 && current >= maxScroll - 4) {
 						// 已经在本章最末屏。两次向底滚 = 下一章。
@@ -368,20 +375,17 @@ function renderChapter(order) {
 							state.currentPage === state.totalPages - 1;
 						if (!onLastPage) return;
 						if (!window._chapterEndArmed) {
-							// 第一次到底：武装，还不动
 							window._chapterEndArmed = true;
 						} else if (
 							state.currentChapter < state.chapters.length - 1 &&
 							Date.now() - state.enteredChapterAt > 1500
 						) {
-							// 第二次到底：执行
 							window._chapterEndArmed = false;
 							nextChapter();
 						} else if (
 							state.currentChapter === state.chapters.length - 1 &&
 							Date.now() - state.enteredChapterAt > 1500
 						) {
-							// 全书最后一章到底 → 全书读完
 							window._chapterEndArmed = false;
 							showBookComplete();
 						}
@@ -390,14 +394,12 @@ function renderChapter(order) {
 					if (direction < 0 && current <= 4) {
 						// 已经在本章最顶屏：跳到上一章末尾一屏
 						if (state.currentChapter > 0) {
-							state.pendingScroll = 1.0; // 恢复到底
+							state.pendingScroll = 1.0;
 							prevChapter();
 						}
 						return;
 					}
-
-					const target = current + direction * viewH;
-					root.scrollTop = Math.max(0, Math.min(maxScroll, target));
+					// 不在边界：让浏览器原生滚动，不做任何事
 				},
 				{ passive: false },
 			);
@@ -462,23 +464,23 @@ function prevChapter() {
 function recomputePagination() {
 	const doc = state.currentDoc;
 	if (!doc) return;
-	const root = doc.documentElement;
-	const viewH = root.clientHeight || 1;
-	const totalH = root.scrollHeight;
+	const scrollEl = doc.scrollingElement || doc.documentElement;
+	const viewH = scrollEl.clientHeight || 1;
+	const totalH = scrollEl.scrollHeight;
 	state.totalPages = Math.max(1, Math.round(totalH / viewH));
 	state.currentPage = Math.min(
 		state.totalPages - 1,
-		Math.max(0, Math.round(root.scrollTop / viewH)),
+		Math.max(0, Math.round(scrollEl.scrollTop / viewH)),
 	);
 }
 
 function gotoPage(page) {
 	const doc = state.currentDoc;
 	if (!doc) return;
-	const root = doc.documentElement;
-	const viewH = root.clientHeight || 1;
+	const scrollEl = doc.scrollingElement || doc.documentElement;
+	const viewH = scrollEl.clientHeight || 1;
 	const target = Math.max(0, Math.min(state.totalPages - 1, Math.round(page)));
-	root.scrollTop = target * viewH;
+	scrollEl.scrollTop = target * viewH;
 	recomputePagination();
 	showChapterNav(
 		state.chapters[state.currentChapter]?.title,

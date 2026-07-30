@@ -28,3 +28,5 @@ Thumbs.db
 # src-tauri/icons/*.ico
 # EPUB test files
 *.epub
+*.exe
+*.zip

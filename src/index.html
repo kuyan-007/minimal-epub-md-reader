@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minimal EPUB Reader</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="drag-region" class="drag-region" aria-label="拖动区域"></div>
+
+    <main id="reader" class="reader">
+      <div id="empty-state" class="empty-state">
+        <h1>极简 EPUB 阅读器</h1>
+        <p class="hint">双击 <code>.epub</code> 文件即可打开</p>
+        <p class="shortcuts">
+          <span>右键单击 切换目录</span>
+          <span>滚轮 / <kbd>←</kbd> <kbd>→</kbd> 上下滚一屏翻一页</span>
+          <span>末屏停留 3 秒 自动续读</span>
+          <span><kbd>Esc</kbd> 隐藏窗口</span>
+        </p>
+      </div>
+    </main>
+
+    <!-- 全书阅读进度（右上角） -->
+    <span id="book-progress" class="book-progress"></span>
+
+    <!-- 全书读完提示 -->
+    <div id="book-complete" class="book-complete hidden">全书已读完</div>
+
+    <!-- 目录浮层 -->
+    <aside id="toc" class="toc hidden" aria-label="目录">
+      <header class="toc-header">
+        <span class="toc-title">目录</span>
+        <div class="toc-header-right">
+          <button id="toc-sort" class="toc-sort" title="切换排序">正序</button>
+          <button id="toc-close" class="toc-close" aria-label="关闭">×</button>
+        </div>
+      </header>
+      <nav id="toc-list" class="toc-list"></nav>
+    </aside>
+
+    <!-- 字体切换按钮 -->
+    <button id="font-toggle" class="font-toggle" title="切换字体">文</button>
+
+    <!-- 背景切换按钮 -->
+    <button
+      id="bg-toggle"
+      class="bg-toggle"
+      aria-label="切换背景"
+      title="切换背景"
+    >
+      ●
+    </button>
+
+    <!-- 章节导航浮层（极简翻页提示） -->
+    <div id="chapter-nav" class="chapter-nav">
+      <span id="chapter-title" class="chapter-title"></span>
+      <span id="chapter-progress" class="chapter-progress"></span>
+    </div>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

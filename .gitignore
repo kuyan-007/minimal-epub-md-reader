@@ -1,0 +1,30 @@
+# Rust
+src-tauri/target/
+src-tauri/Cargo.lock
+**/*.rs.bk
+
+# Node
+node_modules/
+package-lock.json
+
+# Build artifacts
+src-tauri/gen/
+*.log
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Tauri generated icons (keep source gen-icons.js, but generated PNG/ICO is reproducible)
+# Actually keep them committed since they're needed for build
+# src-tauri/icons/*.png
+# src-tauri/icons/*.ico
+# EPUB test files
+*.epub

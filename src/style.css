@@ -1,0 +1,475 @@
+/* ============================================================
+ * 极简EPUB阅读器 - 样式（CSS 变量驱动背景）
+ * 设计原则：极简、无装饰、让文本说话
+ * ============================================================ */
+
+:root {
+	/* 5 套背景预设，通过修改 --bg-* 变量切换 */
+	--bg-page: #f5ecd9; /* 页面背景（默认米黄） */
+	--bg-frame: #f5ecd9; /* 外壳背景 */
+	--bg-overlay: #f5ecd9; /* 浮层背景（目录等） */
+	--bg-overlay-border: #d4c8a8;
+
+	--text-primary: #2b2b2b; /* 主文本 */
+	--text-secondary: #6b6b6b; /* 次文本（提示） */
+	--text-muted: #999; /* 弱化文本 */
+
+	--accent: #8b6f3f; /* 当前章节高亮 */
+	--hover: rgba(0, 0, 0, 0.05);
+	--text: var(--text-primary); /* iframe 正文用 */
+
+	--transition: 200ms ease;
+
+	/* 字体策略：用户要求严格只做"目录 + 背景"，因此不引入"字体切换"
+     章节内部完全使用 EPUB 自带样式；这里只控制外壳文字 */
+	--ui-font:
+		-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+		"Microsoft YaHei", sans-serif;
+}
+
+/* 深色背景主题 */
+[data-bg="dark"] {
+	--bg-page: #2b2b2b;
+	--bg-frame: #2b2b2b;
+	--bg-overlay: #1f1f1f;
+	--bg-overlay-border: #3a3a3a;
+	--text-primary: #d4d4d4;
+	--text-secondary: #a0a0a0;
+	--text-muted: #707070;
+	--accent: #d4a76a;
+	--hover: rgba(255, 255, 255, 0.06);
+	--text: var(--text-primary);
+}
+
+[data-bg="green"] {
+	--bg-page: #cbe5cc;
+	--bg-frame: #cbe5cc;
+	--bg-overlay: #b8d8ba;
+	--bg-overlay-border: #95b398;
+	--text-primary: #1a3a1a;
+	--text-secondary: #4a6a4a;
+	--text-muted: #7a9a7a;
+	--accent: #2d5a2d;
+	--hover: rgba(0, 0, 0, 0.05);
+	--text: var(--text-primary);
+}
+
+[data-bg="white"] {
+	--bg-page: #ffffff;
+	--bg-frame: #ffffff;
+	--bg-overlay: #fafafa;
+	--bg-overlay-border: #e0e0e0;
+	--text-primary: #1a1a1a;
+	--text-secondary: #555;
+	--text-muted: #999;
+	--accent: #0066cc;
+	--hover: rgba(0, 0, 0, 0.04);
+	--text: var(--text-primary);
+}
+
+/* ============================================================ */
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+html,
+body {
+	width: 100%;
+	height: 100vh;
+	overflow: hidden;
+	background: transparent;
+	font-family: var(--ui-font);
+	color: var(--text-primary);
+	-webkit-font-smoothing: antialiased;
+	user-select: none;
+}
+
+body {
+	background: var(--bg-frame);
+}
+
+/* 拖动区域：覆盖大部分非交互区域 */
+.drag-region {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 32px;
+	-webkit-app-region: drag;
+	z-index: 1;
+}
+
+/* 右上角全书阅读进度 */
+.book-progress {
+	position: fixed;
+	top: 16px;
+	right: 16px;
+	padding: 2px 10px;
+	border-radius: 12px;
+	background: var(--bg-overlay);
+	border: 1px solid var(--bg-overlay-border);
+	color: var(--text-muted);
+	font-size: 11px;
+	font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+	line-height: 1.6;
+	z-index: 2;
+	pointer-events: none;
+	transition: opacity var(--transition);
+	opacity: 0;
+}
+
+.book-progress.visible {
+	opacity: 1;
+}
+
+/* 全书读完醒目提示 */
+.book-complete {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background: var(--accent);
+	color: var(--bg-page);
+	font-size: clamp(18px, 5vw, 44px);
+	font-weight: 700;
+	padding: clamp(12px, 2.5vw, 28px) clamp(28px, 5vw, 56px);
+	border-radius: clamp(8px, 1.5vw, 16px);
+	z-index: 100;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+	text-align: center;
+	letter-spacing: 0.1em;
+	pointer-events: none;
+	transition: opacity 0.3s ease;
+	white-space: nowrap;
+	width: max-content;
+	max-width: 90vw;
+}
+
+.book-complete.hidden {
+	opacity: 0;
+	pointer-events: none;
+}
+
+/* 阅读容器 */
+.reader {
+	position: relative;
+	width: 100%;
+	height: 100vh;
+	overflow: hidden;
+	background: var(--bg-frame);
+	/* 窗口四周留白 */
+	padding: 6px;
+	box-sizing: border-box;
+}
+
+#chapter-frame {
+	width: 100%;
+	height: 100%;
+	border: none;
+	display: block;
+	background: var(--bg-frame);
+}
+
+/* 空状态 */
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	padding: 32px;
+	text-align: center;
+	color: var(--text-secondary);
+}
+
+.empty-state h1 {
+	font-size: 22px;
+	font-weight: 500;
+	margin-bottom: 16px;
+	color: var(--text-primary);
+}
+
+.empty-state .hint {
+	font-size: 14px;
+	margin-bottom: 24px;
+}
+
+.empty-state code {
+	font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+	background: var(--hover);
+	padding: 2px 6px;
+	border-radius: 3px;
+}
+
+.empty-state .shortcuts {
+	display: flex;
+	gap: 16px;
+	flex-wrap: wrap;
+	justify-content: center;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+
+kbd {
+	font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+	background: var(--hover);
+	padding: 1px 5px;
+	border-radius: 3px;
+	font-size: 11px;
+}
+
+/* 目录浮层 */
+.toc {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 320px;
+	max-width: 80%;
+	height: 100%;
+	background: var(--bg-overlay);
+	border-right: 1px solid var(--bg-overlay-border);
+	z-index: 100;
+	display: flex;
+	flex-direction: column;
+	transition: transform var(--transition);
+}
+
+.toc.hidden {
+	transform: translateX(-100%);
+}
+
+.toc-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 16px;
+	border-bottom: 1px solid var(--bg-overlay-border);
+	-webkit-app-region: drag;
+}
+
+.toc-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--text-secondary);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.toc-close {
+	background: none;
+	border: none;
+	font-size: 20px;
+	line-height: 1;
+	color: var(--text-secondary);
+	cursor: pointer;
+	padding: 4px 8px;
+	border-radius: 4px;
+	-webkit-app-region: no-drag;
+}
+
+.toc-close:hover {
+	background: var(--hover);
+	color: var(--text-primary);
+}
+
+/* 目录排序按钮 */
+.toc-header-right {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.toc-sort {
+	background: none;
+	border: 1px solid var(--bg-overlay-border);
+	border-radius: 10px;
+	padding: 2px 8px;
+	font-size: 11px;
+	cursor: pointer;
+	color: var(--text-muted);
+	line-height: 1.4;
+	font-family: var(--ui-font);
+	-webkit-app-region: no-drag;
+}
+
+.toc-sort:hover {
+	color: var(--text-primary);
+	border-color: var(--text-muted);
+}
+
+.toc-list {
+	flex: 1;
+	overflow-y: auto;
+	padding: 8px 0;
+}
+
+.toc-item {
+	display: block;
+	width: 100%;
+	text-align: left;
+	background: none;
+	border: none;
+	padding: 6px 16px;
+	font-size: 13px;
+	color: var(--text-primary);
+	cursor: pointer;
+	font-family: inherit;
+	border-left: 2px solid transparent;
+	transition:
+		background var(--transition),
+		border-color var(--transition);
+}
+
+.toc-item:hover {
+	background: var(--hover);
+}
+
+.toc-item.active {
+	border-left-color: var(--accent);
+	color: var(--accent);
+	font-weight: 500;
+}
+
+.toc-item.depth-1 {
+	padding-left: 16px;
+}
+.toc-item.depth-2 {
+	padding-left: 28px;
+	font-size: 12px;
+}
+.toc-item.depth-3 {
+	padding-left: 40px;
+	font-size: 12px;
+	color: var(--text-secondary);
+}
+.toc-item.depth-4 {
+	padding-left: 52px;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+
+/* 背景切换按钮 */
+.bg-toggle {
+	position: fixed;
+	bottom: 16px;
+	right: 16px;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background: var(--bg-overlay);
+	border: 1px solid var(--bg-overlay-border);
+	color: var(--text-secondary);
+	font-size: 14px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 50;
+	transition:
+		background var(--transition),
+		transform var(--transition);
+	-webkit-app-region: no-drag;
+}
+
+.bg-toggle:hover {
+	transform: scale(1.05);
+	color: var(--text-primary);
+}
+
+.bg-toggle:active {
+	transform: scale(0.95);
+}
+
+/* 字体切换按钮（与 bg-toggle 同尺寸，排在其左边） */
+.font-toggle {
+	position: fixed;
+	bottom: 16px;
+	right: 60px;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background: var(--bg-overlay);
+	border: 1px solid var(--bg-overlay-border);
+	color: var(--text-secondary);
+	font-size: 14px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 50;
+	transition:
+		background var(--transition),
+		transform var(--transition);
+	-webkit-app-region: no-drag;
+	font-family: var(--ui-font);
+}
+
+.font-toggle:hover {
+	color: var(--text-primary);
+	transform: scale(1.05);
+}
+
+.font-toggle:active {
+	transform: scale(0.95);
+}
+
+/* 章节标题与进度 */
+.chapter-nav {
+	position: fixed;
+	bottom: 16px;
+	left: 50%;
+	transform: translateX(-50%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 14px;
+	background: var(--bg-overlay);
+	border: 1px solid var(--bg-overlay-border);
+	border-radius: 16px;
+	z-index: 50;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity var(--transition);
+}
+
+.chapter-nav.visible {
+	opacity: 0.95;
+}
+
+.chapter-title {
+	font-size: 12px;
+	color: var(--text-primary);
+	max-width: 360px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.chapter-progress {
+	font-size: 11px;
+	color: var(--text-muted);
+	font-family: ui-monospace, monospace;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--bg-overlay-border);
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--text-muted);
+}

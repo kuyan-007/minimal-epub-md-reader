@@ -1,0 +1,17 @@
+{
+  "name": "minimal-epub-reader",
+  "private": true,
+  "version": "0.1.0",
+  "description": "极简EPUB阅读器 - 可隐藏的浮动文本窗",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.1.1",
+    "@tauri-apps/plugin-fs": "^2.0.3"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0"
+  }
+}

@@ -46,6 +46,7 @@ const state = {
 	globalCss: "", // EPUB 内 CSS 汇总
 	pendingScroll: null,
 	tocAscending: true, // 目录排序：正序？
+	isMd: false, // 当前打开的是 MD 文件（全文单章模式）
 	// 进入当前章节的时间戳，用于给"自动跳转下一章"加一道入章保护：
 	//   如果刚跳转或刚打开书的前 1.5 秒不触发，避免用户从序章末尾跳过来
 	//   或首屏正好很矮时立刻被推进下一章。
@@ -107,10 +108,19 @@ function renderToc() {
 			btn.className = `toc-item depth-${Math.min(node.level || 1, 4)}`;
 			btn.textContent = node.label;
 			btn.dataset.order = String(node.order);
-			if (node.order === state.currentChapter) btn.classList.add("active");
+			if (state.isMd) {
+				// MD 模式：高亮跟随滚动位置
+				if (node.order === state._mdActiveToc) btn.classList.add("active");
+			} else {
+				if (node.order === state.currentChapter) btn.classList.add("active");
+			}
 			btn.addEventListener("click", () => {
-				jumpToChapter(node.order);
-				toggleToc(false);
+				if (state.isMd) {
+					scrollToMdHeading(node.order);
+				} else {
+					jumpToChapter(node.order);
+					toggleToc(false);
+				}
 			});
 			els.tocList.appendChild(btn);
 			if (node.children && node.children.length) appendNodes(node.children);
@@ -130,6 +140,19 @@ function renderToc() {
 	// 更新排序按钮文字
 	const sortBtn = document.getElementById("toc-sort");
 	if (sortBtn) sortBtn.textContent = state.tocAscending ? "正序" : "倒序";
+}
+
+/** MD 全文模式：滚动到指定标题锚点 */
+function scrollToMdHeading(order) {
+	const doc = state.currentDoc;
+	if (!doc) return;
+	const el = doc.getElementById(`ch${order}`);
+	if (el) {
+		el.scrollIntoView({ behavior: "smooth", block: "start" });
+	}
+	state._mdActiveToc = order;
+	renderToc();
+	toggleToc(false);
 }
 
 function toggleTocSort() {
@@ -244,6 +267,31 @@ function renderChapter(order) {
 				}
 			}
 
+			// 处理 MD 图片（.md-image-wrapper[data-src]）
+			const mdImages = Array.from(
+				doc.querySelectorAll(".md-image-wrapper[data-src]"),
+			);
+			for (const wrapper of mdImages) {
+				const src = wrapper.getAttribute("data-src");
+				if (!src) continue;
+				// 如果是相对路径，基于 md 所在目录拼接
+				let absPath = src;
+				if (!src.startsWith("/") && !src.match(/^[a-zA-Z]:/)) {
+					const norm = state.bookPath.replace(/\\/g, "/");
+					const base = norm.substring(0, norm.lastIndexOf("/"));
+					absPath = base + "/" + src;
+				}
+				try {
+					const dataUrl = await invoke("get_md_resource", {
+						src: absPath.replace(/\\/g, "/"),
+					});
+					const img = wrapper.querySelector("img");
+					if (img) img.setAttribute("src", dataUrl);
+				} catch (e) {
+					console.warn("md image load failed:", src, e);
+				}
+			}
+
 			// 注入【上下原生滚动 · 一屏一页】CSS：
 			//   - 不再用 column；chapter-body 简单纵向 block
 			//   - html/body overflow-y: auto（原生滚动，但不能横向溢）
@@ -290,6 +338,177 @@ function renderChapter(order) {
 					.chapter-body img, .chapter-body table, .chapter-body pre {
 						max-width: 100%;
 					}
+
+					/* ── Markdown 元素样式 ── */
+					/* 标题 */
+					.chapter-body h1 {
+						font-size: 1.6em;
+						font-weight: 700;
+						margin: 1.2em 0 0.5em;
+						padding-bottom: 0.3em;
+						border-bottom: 1px solid var(--bg-overlay-border, #d4c8a8);
+						color: var(--text-primary, #2b2b2b);
+					}
+					.chapter-body h2 {
+						font-size: 1.35em;
+						font-weight: 700;
+						margin: 1.1em 0 0.4em;
+						padding-bottom: 0.2em;
+						border-bottom: 1px solid var(--bg-overlay-border, #d4c8a8);
+						color: var(--text-primary, #2b2b2b);
+					}
+					.chapter-body h3 {
+						font-size: 1.15em;
+						font-weight: 600;
+						margin: 1em 0 0.3em;
+						color: var(--text-primary, #2b2b2b);
+					}
+					.chapter-body h4, .chapter-body h5, .chapter-body h6 {
+						font-size: 1em;
+						font-weight: 600;
+						margin: 0.8em 0 0.3em;
+						color: var(--text-secondary, #6b6b6b);
+					}
+
+					/* 段落 */
+					.chapter-body p {
+						margin: 0.6em 0;
+					}
+
+					/* 引用 */
+					.chapter-body blockquote {
+						margin: 0.8em 0;
+						padding: 0.5em 1em;
+						border-left: 4px solid var(--accent, #8b6f3f);
+						background: var(--hover, rgba(0,0,0,0.03));
+						border-radius: 0 4px 4px 0;
+						color: var(--text-secondary, #6b6b6b);
+					}
+					.chapter-body blockquote p {
+						margin: 0.3em 0;
+					}
+					.chapter-body blockquote blockquote {
+						margin-left: 0.5em;
+					}
+
+					/* 代码块 */
+					.chapter-body pre {
+						margin: 0.8em 0;
+						padding: 12px 16px;
+						background: var(--bg-overlay, #f0e8d4);
+						border: 1px solid var(--bg-overlay-border, #d4c8a8);
+						border-radius: 6px;
+						overflow-x: auto;
+						font-size: 0.85em;
+						line-height: 1.45;
+						font-family: ui-monospace, "Cascadia Code", "Consolas", "Courier New", monospace;
+					}
+					.chapter-body code {
+						font-family: ui-monospace, "Cascadia Code", "Consolas", "Courier New", monospace;
+						font-size: 0.88em;
+					}
+					/* 行内代码 */
+					.chapter-body p > code,
+					.chapter-body li > code {
+						background: var(--bg-overlay, #f0e8d4);
+						padding: 1px 5px;
+						border-radius: 3px;
+						border: 1px solid var(--bg-overlay-border, #d4c8a8);
+						word-break: break-word;
+					}
+
+					/* 表格 */
+					.chapter-body table {
+						border-collapse: collapse;
+						margin: 0.8em 0;
+						font-size: 0.92em;
+						width: auto;
+						min-width: 50%;
+					}
+					.chapter-body th,
+					.chapter-body td {
+						border: 1px solid var(--bg-overlay-border, #d4c8a8);
+						padding: 6px 12px;
+						text-align: left;
+					}
+					.chapter-body th {
+						background: var(--bg-overlay, #f0e8d4);
+						font-weight: 600;
+					}
+					.chapter-body tr:nth-child(even) td {
+						background: var(--hover, rgba(0,0,0,0.02));
+					}
+
+					/* 列表 */
+					.chapter-body ul,
+					.chapter-body ol {
+						margin: 0.4em 0;
+						padding-left: 1.8em;
+					}
+					.chapter-body li {
+						margin: 0.2em 0;
+					}
+					.chapter-body ul ul,
+					.chapter-body ol ol,
+					.chapter-body ul ol,
+					.chapter-body ol ul {
+						margin: 0;
+					}
+
+					/* 任务列表 */
+					.chapter-body ul.task-list {
+						list-style: none;
+						padding-left: 0.5em;
+					}
+					.chapter-body .task-list-item {
+						display: flex;
+						align-items: baseline;
+						gap: 0.3em;
+					}
+					.chapter-body .task-list-item input[type="checkbox"] {
+						margin: 0;
+						accent-color: var(--accent, #8b6f3f);
+					}
+
+					/* 分割线 */
+					.chapter-body hr {
+						border: none;
+						border-top: 1px solid var(--bg-overlay-border, #d4c8a8);
+						margin: 1.5em 0;
+					}
+
+					/* 链接 */
+					.chapter-body a {
+						color: var(--accent, #8b6f3f);
+						text-decoration: none;
+					}
+					.chapter-body a:hover {
+						text-decoration: underline;
+					}
+
+					/* 图片 */
+					.chapter-body img {
+						max-width: 100%;
+						height: auto;
+						border-radius: 4px;
+						margin: 0.5em 0;
+					}
+
+					/* 删除线 */
+					.chapter-body del,
+					.chapter-body s {
+						text-decoration: line-through;
+						color: var(--text-muted, #999);
+					}
+
+					/* 脚注 */
+					.chapter-body .footnote-definition {
+						font-size: 0.85em;
+						color: var(--text-secondary, #6b6b6b);
+						margin-top: 0.5em;
+						padding-top: 0.3em;
+						border-top: 1px solid var(--bg-overlay-border, #d4c8a8);
+					}
 				`;
 			}
 			applyPageCSS();
@@ -324,6 +543,28 @@ function renderChapter(order) {
 				const st = scrollEl.scrollTop;
 				const totalH = scrollEl.scrollHeight;
 				const viewH = scrollEl.clientHeight;
+
+				// MD 模式：检测当前可见标题，更新目录高亮与导航浮层
+				if (state.isMd && state.toc.length > 0) {
+					// 从后往前找第一个在视口上方或内部的 H2
+					let activeIdx = -1;
+					for (let i = state.toc.length - 1; i >= 0; i--) {
+						const el = doc.getElementById(`ch${state.toc[i].order}`);
+						if (el && el.offsetTop <= st + viewH * 0.3) {
+							activeIdx = i;
+							break;
+						}
+					}
+					if (activeIdx !== state._mdActiveToc) {
+						state._mdActiveToc =
+							activeIdx >= 0 ? state.toc[activeIdx].order : -1;
+						renderToc();
+						// 更新底部导航浮层
+						const label =
+							activeIdx >= 0 ? state.toc[activeIdx].label : state.title || "";
+						showChapterNav(label, 0, 1);
+					}
+				}
 
 				// 进度保存：当前位置 / 总可滚距离
 				const maxScroll = totalH - viewH;
@@ -363,6 +604,8 @@ function renderChapter(order) {
 
 					// 正常滚轮：不拦截，让浏览器原生行级滚动（≈10 行/次）
 					// 仅检测顶/底边界，用于翻章
+					// MD 全文模式：不触发翻章
+					if (state.isMd) return;
 					if (Math.abs(e.deltaY) < 1) return;
 					const direction = e.deltaY > 0 ? 1 : -1;
 					const current = scrollEl.scrollTop;
@@ -421,6 +664,13 @@ function renderChapter(order) {
 					toggleToc(); // 右键切换
 				} else if (e.button === 0 && !els.toc.classList.contains("hidden")) {
 					toggleToc(false); // 左键隐藏
+				}
+			});
+
+			// iframe 内键盘：ESC 隐藏窗口（keydown 不跨 iframe 冒泡）
+			doc.addEventListener("keydown", (e) => {
+				if (e.key === "Escape") {
+					if (getCurrentWindow) getCurrentWindow().hide();
 				}
 			});
 		} catch (e) {
@@ -555,7 +805,26 @@ function syncThemeToIframe() {
 	}
 	const bg = cs.getPropertyValue("--bg-frame").trim() || "#f5ecd9";
 	const text = cs.getPropertyValue("--text").trim() || "#2b2b2b";
-	styleEl.textContent = `:root { --bg-frame: ${bg}; --text: ${text}; }`;
+	const overlayBorder =
+		cs.getPropertyValue("--bg-overlay-border").trim() || "#d4c8a8";
+	const overlay = cs.getPropertyValue("--bg-overlay").trim() || "#f5ecd9";
+	const accent = cs.getPropertyValue("--accent").trim() || "#8b6f3f";
+	const hover = cs.getPropertyValue("--hover").trim() || "rgba(0,0,0,0.05)";
+	const textMuted = cs.getPropertyValue("--text-muted").trim() || "#999";
+	const textSecondary =
+		cs.getPropertyValue("--text-secondary").trim() || "#6b6b6b";
+	const textPrimary = cs.getPropertyValue("--text-primary").trim() || "#2b2b2b";
+	styleEl.textContent = `:root {
+		--bg-frame: ${bg};
+		--text: ${text};
+		--bg-overlay-border: ${overlayBorder};
+		--bg-overlay: ${overlay};
+		--accent: ${accent};
+		--hover: ${hover};
+		--text-muted: ${textMuted};
+		--text-secondary: ${textSecondary};
+		--text-primary: ${textPrimary};
+	}`;
 }
 
 // ---------- 字体切换 ----------
@@ -626,7 +895,17 @@ function showBookComplete() {
 }
 
 // ---------- 打开 EPUB ----------
+// ---------- 打开文件（自动区分 .epub / .md） ----------
 async function openEpub(path) {
+	const lower = path.toLowerCase();
+	if (lower.endsWith(".md")) {
+		return openMdFile(path);
+	}
+	// 默认 EPUB
+	return openEpubFile(path);
+}
+
+async function openEpubFile(path) {
 	try {
 		const result = await invoke("open_epub", { path });
 		state.bookPath = path;
@@ -636,6 +915,7 @@ async function openEpub(path) {
 		state.chapters = result.book.chapters;
 		state.toc = result.book.toc;
 		state.globalCss = result.css;
+		state.isMd = false;
 
 		renderToc();
 
@@ -657,6 +937,40 @@ async function openEpub(path) {
 		renderChapter(resumeChapter);
 	} catch (e) {
 		alert("打开 EPUB 失败:\n" + e);
+	}
+}
+
+async function openMdFile(path) {
+	try {
+		const result = await invoke("open_md", { path });
+		state.bookPath = path;
+		state.bookId = result.book_id;
+		state.title = result.title;
+		state.author = result.author || "";
+		state.chapters = result.chapters;
+		state.toc = result.toc;
+		state.globalCss = "";
+		state.isMd = true;
+		state._mdActiveToc = -1;
+
+		renderToc();
+
+		// 恢复阅读进度
+		let resumeScroll = 0;
+		if (invoke) {
+			try {
+				const prog = await invoke("load_progress", { bookId: state.bookId });
+				if (prog) {
+					resumeScroll = prog.scroll || 0;
+				}
+			} catch (e) {
+				console.warn("load_progress failed", e);
+			}
+		}
+		state.pendingScroll = resumeScroll;
+		renderChapter(0);
+	} catch (e) {
+		alert("打开 MD 失败:\n" + e);
 	}
 }
 

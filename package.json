@@ -12,6 +12,7 @@
     "@tauri-apps/plugin-fs": "^2.0.3"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.1.0"
+    "@tauri-apps/cli": "^2.1.0",
+    "pngjs": "^7.0.0"
   }
 }

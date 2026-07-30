@@ -99,6 +99,25 @@ pub fn open_epub(path: String) -> Result<OpenEpubResult, String> {
     Ok(OpenEpubResult { book, css })
 }
 
+// ---------- MD ----------
+
+#[tauri::command]
+pub fn open_md(path: String) -> Result<crate::md::MdBook, String> {
+    crate::md::open(&path)
+}
+
+/// 读取 MD 文件中引用的本地图片，返回 data URL
+#[tauri::command]
+pub fn get_md_resource(src: String) -> Result<String, String> {
+    use std::fs;
+    let bytes = fs::read(&src).map_err(|e| format!("读取图片失败: {e}"))?;
+    let mime = infer_mime(&src);
+    let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
+    Ok(format!("data:{mime};base64,{b64}"))
+}
+
+// ---------- 资源 ----------
+
 #[tauri::command]
 pub fn get_resource(epub_path: String, src: String) -> Result<String, String> {
     // 读取图片资源并返回 data URL（绕过 file:// 在 sandbox iframe 中被拦）

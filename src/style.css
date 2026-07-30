@@ -103,10 +103,42 @@ body {
 }
 
 /* 右上角全书阅读进度 */
-.book-progress {
+/* 右上角格式徽标 */
+.format-badge {
 	position: fixed;
 	top: 16px;
 	right: 16px;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.3px;
+	line-height: 1.6;
+	z-index: 2;
+	pointer-events: none;
+	transition: opacity var(--transition);
+	opacity: 0;
+}
+
+.format-badge.visible {
+	opacity: 1;
+}
+
+.format-badge.is-epub {
+	background: #5b4b8a;
+	color: #fff;
+}
+
+.format-badge.is-md {
+	background: #3b8a5b;
+	color: #fff;
+}
+
+/* 全书阅读进度，放在格式徽标左边 */
+.book-progress {
+	position: fixed;
+	top: 16px;
+	right: 92px;
 	padding: 2px 10px;
 	border-radius: 12px;
 	background: var(--bg-overlay);

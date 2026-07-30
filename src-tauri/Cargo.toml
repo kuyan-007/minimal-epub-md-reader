@@ -19,6 +19,7 @@ tauri-plugin-fs = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 base64 = "0.22"
+pulldown-cmark = "0.13"
 epub = "2.1.5"
 tauri-plugin-single-instance = "2"
 

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Minimal EPUB Reader</title>
+    <title>极简EPUB\MD阅读器</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -11,8 +11,10 @@
 
     <main id="reader" class="reader">
       <div id="empty-state" class="empty-state">
-        <h1>极简 EPUB 阅读器</h1>
-        <p class="hint">双击 <code>.epub</code> 文件即可打开</p>
+        <h1>极简EPUB\MD阅读器</h1>
+        <p class="hint">
+          双击 <code>.epub</code> / <code>.md</code> 文件或拖入窗口即可打开
+        </p>
         <p class="shortcuts">
           <span>右键单击 切换目录</span>
           <span>滚轮 / <kbd>←</kbd> <kbd>→</kbd> 上下滚一屏翻一页</span>
@@ -24,6 +26,7 @@
 
     <!-- 全书阅读进度（右上角） -->
     <span id="book-progress" class="book-progress"></span>
+    <span id="format-badge" class="format-badge"></span>
 
     <!-- 全书读完提示 -->
     <div id="book-complete" class="book-complete hidden">全书已读完</div>

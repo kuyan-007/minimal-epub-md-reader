@@ -5,7 +5,6 @@ src-tauri/Cargo.lock
 
 # Node
 node_modules/
-package-lock.json
 
 # Build artifacts
 src-tauri/gen/
@@ -22,11 +21,19 @@ Thumbs.db
 *.swp
 *~
 
-# Tauri generated icons (keep source gen-icons.js, but generated PNG/ICO is reproducible)
-# Actually keep them committed since they're needed for build
-# src-tauri/icons/*.png
-# src-tauri/icons/*.ico
-# EPUB test files
+# EPUB / Markdown 个体测试样本（不随仓库发布）
 *.epub
 *.exe
 *.zip
+*.msi
+
+# 测试用的 MD 文件（该文件在内存提供 MD 渲染测试，不随仓库发布）
+test-reader.md
+
+# 本地分析 / 草稿（不随仓库发布）
+CODE-SLIM-REPORT.md
+/reports/
+/scratch/
+
+# — npm lockfile 保留以保证复现 —
+# （package-lock.json **不要**忽略，删掉下行注释）

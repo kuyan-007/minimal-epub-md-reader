@@ -1,4 +1,4 @@
-# 极简EPUB阅读器（Minimal EPUB Reader）
+# 极简EPUB/MD阅读器（Minimal EPUB-MD Reader）
 
 > Windows 浮动文本窗式 EPUB 阅读器。**极简到只有三件事**：看目录、换背景、继续读。
 

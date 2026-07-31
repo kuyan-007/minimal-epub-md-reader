@@ -20,16 +20,43 @@ const BG_PRESETS = [
 	{ id: "dark", name: "深灰", dataAttr: "dark" },
 ];
 
-/** 4 种小说阅读常用字体
- *  family 为空（索引 0）= 不覆盖，用 EPUB 原字体 */
+/** 阅读字体预设
+ *  索引 0 = 默认正文阅读字体：思源宋体 SC（Noto Serif SC / Source Han Serif SC）
+ *  字体回退链覆盖三大平台：
+ *    - Noto Serif SC / Source Han Serif SC：Linux（Google + Adobe 联合发布）
+ *    - 思源宋体 SC：部分中文系统名
+ *    - Songti SC：macOS 自带宋体
+ *    - SimSun / 宋体：Windows 默认宋体
+ *    - serif：保底
+ *  其余三项为手动切换：
+ *    - 霞鹜文楷（LXGW WenKai，屏幕阅读友好）
+ *    - 思源黑体（Source Han Sans SC / Noto Sans SC）
+ *    - 微软雅黑（Windows 默认黑体）
+ *  不打包字体文件：找不到时由 CSS font-family 逐级回落直至系统默认。 */
 const FONT_PRESETS = [
-	{ id: "default", name: "默认", family: "" },
-	{ id: "kaiti", name: "楷体", family: "KaiTi, 楷体, STKaiti, serif" },
-	{ id: "songti", name: "宋体", family: "SimSun, 宋体, STSong, serif" },
+	{
+		id: "default",
+		name: "默认",
+		family:
+			'"Noto Serif SC", "Source Han Serif SC", "思源宋体 SC", "Songti SC", SimSun, "宋体", serif',
+	},
+	{
+		id: "wenkai",
+		name: "霞鹜文楷",
+		family:
+			'"LXGW WenKai", "LXGW WenKai Screen", "霞鹜文楷", "霞鹜文楷屏幕版", KaiTi, "楷体", "STKaiti", serif',
+	},
+	{
+		id: "heiti",
+		name: "思源黑体",
+		family:
+			'"Source Han Sans SC", "思源黑体 SC", "Noto Sans SC", "Noto Sans CJK SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", sans-serif',
+	},
 	{
 		id: "yahei",
-		name: "雅黑",
-		family: '"Microsoft YaHei", 微软雅黑, sans-serif',
+		name: "微软雅黑",
+		family:
+			'"Microsoft YaHei", "微软雅黑", "PingFang SC", "Hiragino Sans GB", "Source Han Sans SC", "Noto Sans SC", sans-serif',
 	},
 ];
 
@@ -837,10 +864,6 @@ function applyFontFamily(idx) {
 	const preset = FONT_PRESETS[idx];
 	if (!preset) return;
 	state.fontFamilyIndex = idx;
-	// 更新按钮文字
-	if (els.fontToggle) {
-		els.fontToggle.textContent = preset.name;
-	}
 	// 注入 iframe
 	const doc = state.currentDoc;
 	if (!doc) return;

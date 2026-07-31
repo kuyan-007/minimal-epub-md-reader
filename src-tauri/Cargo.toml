@@ -22,6 +22,7 @@ base64 = "0.22"
 pulldown-cmark = "0.13"
 epub = "2.1.5"
 tauri-plugin-single-instance = "2"
+katex-rs = "0.2"
 
 [profile.release]
 panic = "abort"

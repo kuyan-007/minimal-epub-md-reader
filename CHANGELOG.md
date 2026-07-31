@@ -7,6 +7,19 @@
 
 ## [Unreleased]
 
+### 新增
+
+- **MD 公式渲染**：接入 `katex-rs` v0.2.4，pulldown-cmark 启 `ENABLE_MATH` 后拦截 `InlineMath` / `DisplayMath` 事件 → katex 渲染为 HTML。检测到公式才在章节 HTML 头部插入 KaTeX CSS（20 个 woff2 字体已 base64 内嵌为 data URI，零运行时资源依赖）
+- **语法覆盖**：`$...$` / `$$...$$` 行内与块级 LaTeX。常见矩阵、积分、求和、希腊字母、化学式均可
+- **错误回退**：渲染失败的 LaTeX 回退为 `<code class="math-error">`，hover 看 title 里的错误原因
+- **离线零依赖**：KaTeX CSS + 字体通过 `include_str!` 编入二进制，SSR 渲染不需 JS
+- **`scripts/inline-katex-css.js`**：从 `node_modules/katex/dist/` 生成 `src/katex-inline.css`，`npm run katex-css` 可手动重跑，prebuild 钩子自动跑
+
+### 依赖
+
+- Rust: `katex-rs = "0.2"`（+ 传递依赖 `katex`、`bon`、`strum` 等）
+- npm: `katex`（dev，仅构建期生成 CSS 使用）
+
 ### 文档
 
 - 重写 README.md：完整复盘项目技术架构、已修复 BUG 横向教训、设计原则 Code Review Checklist

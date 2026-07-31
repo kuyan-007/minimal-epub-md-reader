@@ -41,6 +41,20 @@
 	--text: var(--text-primary);
 }
 
+/* 纯黑背景主题：AMOLED 友好，背景与浮层同为 #000，仅靠边框 + 文字层区分 */
+[data-bg="black"] {
+	--bg-page: #000000;
+	--bg-frame: #000000;
+	--bg-overlay: #000000;
+	--bg-overlay-border: #1f1f1f;
+	--text-primary: #d8d8d8;
+	--text-secondary: #9a9a9a;
+	--text-muted: #606060;
+	--accent: #f0c674;
+	--hover: rgba(255, 255, 255, 0.06);
+	--text: var(--text-primary);
+}
+
 [data-bg="green"] {
 	--bg-page: #cbe5cc;
 	--bg-frame: #cbe5cc;

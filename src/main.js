@@ -18,6 +18,7 @@ const BG_PRESETS = [
 	{ id: "white", name: "纯白", dataAttr: "white" },
 	{ id: "green", name: "护眼绿", dataAttr: "green" },
 	{ id: "dark", name: "深灰", dataAttr: "dark" },
+	{ id: "black", name: "纯黑", dataAttr: "black" },
 ];
 
 /** 阅读字体预设

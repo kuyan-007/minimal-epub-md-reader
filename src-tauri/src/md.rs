@@ -1,13 +1,41 @@
 // md.rs - Markdown 解析，全文显示 + ## 锚点定位
 // 用 pulldown-cmark Event API 转 HTML，所有内容在一个章节中连续显示
 // 二级标题 (##) 生成带 id 的 <h2> 标签，供目录滚动定位
+//
+// v1.6 新增 KaTeX 公式渲染：
+//   - 启 Options::ENABLE_MATH 后，$...$ / $$...$$ 产出 InlineMath/DisplayMath 事件
+//   - 这两个事件不进入 push_html，转交给 katex-rs 渲染为 HTML
+//   - 若检测到公式，章节 HTML 头部追加 KATEX_CSS（字体已内嵌为 data URI）
+//   - KaTeX CSS 通过 include_str! 编入二进制，零运行时依赖
 
+use katex::{render_to_string, KatexContext, Settings};
 use pulldown_cmark::{html, Event, Options, Parser, Tag, TagEnd};
 use pulldown_cmark::HeadingLevel;
 use serde::Serialize;
 use std::path::Path;
 
 use crate::epub::TocNode;
+
+/// KaTeX 全套 CSS（字体已内嵌为 base64 data URI）。
+/// 由 scripts/inline-katex-css.js 从 node_modules/katex 生成。
+/// 文件不存在时编译失败——避免运行时才发现。
+const KATEX_CSS: &str = include_str!("../../src/katex-inline.css");
+
+/// LaTeX 源码中的 HTML 特殊字符转义，用于公式渲染失败时的回退显示。
+fn html_escape(s: &str) -> String {
+	let mut out = String::with_capacity(s.len());
+	for c in s.chars() {
+		match c {
+			'&' => out.push_str("&amp;"),
+			'<' => out.push_str("&lt;"),
+			'>' => out.push_str("&gt;"),
+			'"' => out.push_str("&quot;"),
+			'\'' => out.push_str("&#39;"),
+			_ => out.push(c),
+		}
+	}
+	out
+}
 
 #[derive(Debug, Serialize, Clone)]
 pub struct MdChapter {
@@ -51,13 +79,25 @@ pub fn open(path_str: &str) -> Result<MdBook, String> {
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_else(|| "未命名".into());
 
-    // 启用扩展选项：删除线、任务列表、脚注、表格
+    // 启用扩展选项：删除线、任务列表、脚注、表格、数学公式
     let mut opts = Options::empty();
     opts.insert(Options::ENABLE_STRIKETHROUGH);
     opts.insert(Options::ENABLE_TASKLISTS);
     opts.insert(Options::ENABLE_FOOTNOTES);
     opts.insert(Options::ENABLE_TABLES);
+    opts.insert(Options::ENABLE_MATH);
     let parser = Parser::new_ext(&content, opts);
+
+    // KaTeX 上下文与设置：每个解析调用内复用同一 ctx（缓存字体/宏），
+    // inline 与 display 各持一份 Settings（display_mode 是编译期常量之外的运行时差异）。
+    let katex_ctx = KatexContext::default();
+    let katex_inline = Settings::builder()
+        .display_mode(false)
+        .build();
+    let katex_display = Settings::builder()
+        .display_mode(true)
+        .build();
+    let mut has_math = false;
 
     let mut full_html = String::new();
     let mut toc: Vec<TocNode> = Vec::new();
@@ -161,6 +201,38 @@ pub fn open(path_str: &str) -> Result<MdBook, String> {
             Event::Text(_) if in_img => {
                 // 图片 alt 文本：直接丢弃，避免作为普通文字显示
             }
+            Event::InlineMath(tex) => {
+                // 公式可能出现于段落中间，所以先 flush 之前的文本/格式事件
+                flush(&mut event_buf, &mut full_html);
+                let src = tex.to_string();
+                match render_to_string(&katex_ctx, &src, &katex_inline) {
+                    Ok(html) => full_html.push_str(&html),
+                    Err(e) => {
+                        // 渲染失败回退：在 <code> 里展示原始 LaTeX，title 透露错误原因
+                        full_html.push_str(&format!(
+                            "<code class=\"math-error math-inline\" title=\"{err}\">{src}</code>",
+                            err = html_escape(&e.to_string()),
+                            src = html_escape(&src),
+                        ));
+                    }
+                }
+                has_math = true;
+            }
+            Event::DisplayMath(tex) => {
+                flush(&mut event_buf, &mut full_html);
+                let src = tex.to_string();
+                match render_to_string(&katex_ctx, &src, &katex_display) {
+                    Ok(html) => full_html.push_str(&html),
+                    Err(e) => {
+                        full_html.push_str(&format!(
+                            "<pre class=\"math-error\" title=\"{err}\">{src}</pre>",
+                            err = html_escape(&e.to_string()),
+                            src = html_escape(&src),
+                        ));
+                    }
+                }
+                has_math = true;
+            }
             _ => {
                 event_buf.push(event);
             }
@@ -169,6 +241,12 @@ pub fn open(path_str: &str) -> Result<MdBook, String> {
 
     // flush 剩余内容
     flush(&mut event_buf, &mut full_html);
+
+    // 若本章使用了公式，在章节 HTML 头部插入 KaTeX CSS（字体已 base64 内嵌）。
+    // 浏览器允许 <style> 出现在 <body> 内，CSS 照样全局生效。
+    if has_math {
+        full_html = format!("<style>{}</style>\n", KATEX_CSS) + &full_html;
+    }
 
     // 全文都没有 H2 分割时，添加一个默认目录项
     if toc.is_empty() && !full_html.trim().is_empty() {

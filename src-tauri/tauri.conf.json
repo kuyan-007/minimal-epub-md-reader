@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "极简EPUB\\MD阅读器",
+  "productName": "极简EPUB MD 阅读器",
   "version": "0.1.0",
   "identifier": "com.minimal.epub.reader",
   "build": {
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "极简EPUB\\MD阅读器",
+        "title": "极简EPUB MD 阅读器",
         "minWidth": 400,
         "minHeight": 300,
         "decorations": false,
@@ -27,7 +27,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": "nsis",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

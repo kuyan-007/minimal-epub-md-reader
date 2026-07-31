@@ -5,11 +5,14 @@
   "description": "极简EPUB阅读器 - 可隐藏的浮动文本窗",
   "scripts": {
     "dev": "tauri dev",
-    "build": "tauri build"
+    "build": "tauri build",
+    "katex-css": "node scripts/inline-katex-css.js",
+    "prebuild": "npm run katex-css"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.1.1",
-    "@tauri-apps/plugin-fs": "^2.0.3"
+    "@tauri-apps/plugin-fs": "^2.0.3",
+    "katex": "^0.18.1"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.1.0",

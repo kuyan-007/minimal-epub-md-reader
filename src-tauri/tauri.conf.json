@@ -12,15 +12,13 @@
       {
         "label": "main",
         "title": "极简EPUB\\MD阅读器",
-        "width": 1500,
-        "height": 1000,
         "minWidth": 400,
         "minHeight": 300,
         "decorations": false,
         "transparent": true,
         "skipTaskbar": true,
         "resizable": true,
-        "visible": true
+        "visible": false
       }
     ],
     "security": {

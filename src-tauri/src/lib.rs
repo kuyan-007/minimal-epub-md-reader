@@ -98,21 +98,28 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            // 4. 窗口初始尺寸/位置：宽 = 屏宽/3，高 = 屏高/2，居中
+            // 4. 窗口初始尺寸/位置：宽 = 屏宽 * 3/4，高 = 屏高 * 4/5，居中
             //    - 物理像素；set_size 后 set_position 重新居中
-            //    - 宽 < minWidth 时顶到 minWidth（保证可读）
+            //    - tauri.conf.json 里 visible=false 避免启动闪烁：
+            //      必须先 set_size + set_position，再 show()，否则窗口会按
+            //      默认尺寸先显示一帧再被压缩
             if let Some(window) = app.get_webview_window("main") {
                 if let Ok(Some(monitor)) = app.primary_monitor() {
                     use tauri::{PhysicalPosition, PhysicalSize, Position, Size};
                     let screen = monitor.size();
                     let min_w: u32 = 400;
-                    let win_w = (screen.width / 3).max(min_w);
-                    let win_h = screen.height / 2;
+                    let min_h: u32 = 300;
+                    let win_w = (screen.width * 3 / 4).max(min_w);
+                    let win_h = (screen.height * 4 / 5).max(min_h);
                     let x = ((screen.width as i32) - (win_w as i32)) / 2;
                     let y = ((screen.height as i32) - (win_h as i32)) / 2;
                     let _ = window.set_size(Size::Physical(PhysicalSize::new(win_w, win_h)));
                     let _ =
                         window.set_position(Position::Physical(PhysicalPosition::new(x, y)));
+                    let _ = window.show();
+                } else {
+                    // 拿不到主屏幕信息时直接显示，让窗口以默认尺寸出现
+                    let _ = window.show();
                 }
             }
 

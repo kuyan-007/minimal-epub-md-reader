@@ -699,6 +699,16 @@ function renderChapter(order) {
 				}
 			});
 
+			// iframe 内双击任意位置 → 窗口最大化 / 恢复
+			doc.addEventListener("dblclick", (e) => {
+				if (e.button !== 0) return;
+				// 清 iframe 内的选区（双击选词、避免窗口变化时被高亮）
+				try {
+					doc.getSelection?.()?.removeAllRanges();
+				} catch {}
+				toggleMaximize();
+			});
+
 			// iframe 内键盘：ESC 隐藏窗口（keydown 不跨 iframe 冒泡）
 			doc.addEventListener("keydown", (e) => {
 				if (e.key === "Escape") {
@@ -1121,6 +1131,35 @@ function bindShortcuts() {
 			toggleToc(false);
 		}
 	});
+
+	// 双击窗口任意位置 → 最大化 / 恢复
+	// 直接用 dblclick（浏览器原生事件，自动处理时间窗口 / 位置容差）。
+	// 之前用 click + 时间差，是因为误以为 dblclick 在透明窗口不可靠；
+	// 实际根因是 capability 权限缺失，权限补全后 dblclick 是最简方案。
+	document.addEventListener("dblclick", (e) => {
+		if (e.button !== 0) return;
+		// 清选区：浏览器双击会选中单词，避免 maximize 窗口变化时
+		// 选区高亮跟随重排造成“框选”伪影。
+		try {
+			document.getSelection?.()?.removeAllRanges();
+		} catch {}
+		toggleMaximize();
+	});
+}
+
+// 切换窗口最大化 / 恢复。
+// 清选区作为防御性处理（主调用处 dblclick handler 已清，这里再保证一次）。
+async function toggleMaximize() {
+	const win = getCurrentWindow?.();
+	if (!win || typeof win.toggleMaximize !== "function") return;
+	try {
+		document.getSelection?.()?.removeAllRanges();
+	} catch {}
+	try {
+		await win.toggleMaximize();
+	} catch (err) {
+		console.warn("[maximize] failed:", err);
+	}
 }
 
 // 收到后端 emit 的 open-epub：可能是 second-instance、也可能是联关双击。

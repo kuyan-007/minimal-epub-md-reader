@@ -209,6 +209,20 @@ function buildChapterSrcdoc(chapter) {
 	// 剥离 XML 声明（<?xml ...?>），否则 srcdoc 进入 quirks 模式
 	html = html.replace(/^\s*<\?xml[^>]*\?>\s*/i, "");
 
+	// XHTML 的自闭合标签（如 <span class="pagenum" .../>）在 srcdoc 的 HTML 解析下不会闭合，
+	// 会把后续内容整段吞进该元素并继承它的样式（如《反脆弱》的 .pagenum{font-size:0.8em}
+	// 逐层相乘，表现为「越往下字号越小、颜色变灰」）。这里把非空元素的自闭合写法
+	// 展开成成对标签；br/img/hr 等空元素仍保持自闭合语义。
+	html = html.replace(
+		/<([a-zA-Z][\w:-]*)((?:[^>"']|"[^"]*"|'[^']*')*?)\s*\/>/g,
+		(_, tag, attrs) =>
+			/^(?:area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/i.test(
+				tag,
+			)
+				? `<${tag}${attrs}>`
+				: `<${tag}${attrs}></${tag}>`,
+	);
+
 	// 确保有 doctype + html 包裹
 	if (!/<html[\s>]/i.test(html)) {
 		html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${html}</body></html>`;
@@ -335,6 +349,14 @@ function renderChapter(order) {
 					doc.head.appendChild(styleEl);
 				}
 				styleEl.textContent = `
+					/* 竖排 EPUB 统一压回横排：书里常见
+					   html { writing-mode: vertical-rl }（如《反脆弱》原版），
+					   不拦会导致整章竖排、一屏一页分页失效。
+					   body * 一并覆盖，避免书里对单个元素另设竖排。 */
+					html, body, body * {
+						writing-mode: horizontal-tb !important;
+						-webkit-writing-mode: horizontal-tb !important;
+					}
 					/* 不设 height，让 html/body 自然延伸。
 					   滚动容器仅限 html，body 不参与滚动。 */
 					html {
@@ -1052,20 +1074,18 @@ async function loadPreferences() {
 		return;
 	}
 	try {
-		const prefs = await invoke("load_preferences");
-		if (prefs && typeof prefs.bg_index === "number") {
-			const idx = Math.min(prefs.bg_index, BG_PRESETS.length - 1);
-			applyBackground(idx);
-		} else {
-			applyBackground(0);
-		}
-		if (prefs && typeof prefs.font_size === "number") {
-			state.fontSize = prefs.font_size;
-		}
-		if (prefs && typeof prefs.font_family_index === "number") {
-			applyFontFamily(
-				Math.min(prefs.font_family_index, FONT_PRESETS.length - 1),
-			);
+		// 注意：store.rs 的 Preferences 序列化为 camelCase，
+		// 键名必须是 bgIndex / fontSize / fontFamilyIndex（此前写成 snake_case，
+		// 导致背景与字体偏好实际一直没生效）。
+		const prefs = (await invoke("load_preferences")) || {};
+		if (typeof prefs.fontSize === "number") state.fontSize = prefs.fontSize;
+		applyBackground(
+			typeof prefs.bgIndex === "number"
+				? Math.min(prefs.bgIndex, BG_PRESETS.length - 1)
+				: 0,
+		);
+		if (typeof prefs.fontFamilyIndex === "number") {
+			applyFontFamily(Math.min(prefs.fontFamilyIndex, FONT_PRESETS.length - 1));
 		}
 	} catch (e) {
 		applyBackground(0);
@@ -1187,6 +1207,18 @@ async function handleOpenEpubEvent(payloadPath) {
 async function bootstrap() {
 	bindShortcuts();
 	await loadPreferences();
+
+	// 首页版本号（core:app:default 已含 allow-version）
+	const versionEl = $("#app-version");
+	if (versionEl && TAURI?.app?.getVersion) {
+		try {
+			// 1.8.0 → v1.8（补丁号为 0 时省略）
+			const v = await TAURI.app.getVersion();
+			versionEl.textContent = `v${v.replace(/\.0$/, "")}`;
+		} catch (e) {
+			console.warn("getVersion failed", e);
+		}
+	}
 
 	if (listen) {
 		try {

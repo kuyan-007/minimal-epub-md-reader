@@ -11,6 +11,9 @@ src-tauri/gen/
 *.log
 *.tmp
 
+# 机器本地构建配置（中文路径下的 target-dir 修正，不入库）
+src-tauri/.cargo/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -111,23 +111,49 @@ fn strip_tags(s: &str) -> String {
     out
 }
 
-fn nav_to_toc(nodes: &[NavPoint], level: u32, href_map: &HashMap<String, usize>) -> Vec<TocNode> {
+/// 归一化 href：去掉 #fragment、统一斜杠并转小写。
+/// NCX / nav.xhtml 里的 content src 常带锚点（如 `bodymatter_0_4.xhtml#toc_index_1`），
+/// 带着锚点去匹配章节 href 永远匹配不上，目录点击就会退回 0（看起来「点了没反应」）。
+fn normalize_href(href: &str) -> String {
+    href.split('#')
+        .next()
+        .unwrap_or("")
+        .replace('\\', "/")
+        .to_ascii_lowercase()
+}
+
+/// 取归一化 href 的最后一段（文件名），用于两边目录层级不一致时兜底匹配。
+fn href_file_name(normalized: &str) -> &str {
+    normalized.rsplit('/').next().unwrap_or(normalized)
+}
+
+fn nav_to_toc(
+    nodes: &[NavPoint],
+    level: u32,
+    href_map: &HashMap<String, usize>,
+    name_map: &HashMap<String, usize>,
+) -> Vec<TocNode> {
     nodes
         .iter()
         .map(|n| {
             let href = n.content.to_string_lossy().to_string();
             // 跨平台归一化：EPUB 内 nav.xhtml / toc.ncx 里的 href 在 Windows
             // 反斜杠，前端的 chapter.href 来自 spine 也是反斜杠。两边都换成
-            // 正斜杠 + 小写后做精确匹配；若匹配不到则取最后一个 fallback 的 0，
-            // 前端拿到 0 会安全地忽略。
-            let normalized = href.replace('\\', "/").to_ascii_lowercase();
-            let order = href_map.get(&normalized).copied().unwrap_or(0);
+            // 正斜杠 + 小写后做精确匹配；再退化到「按文件名匹配」，兼容 toc.ncx
+            // 里的 href 相对于 OPF 目录、而章节 href 带 OEBPS/ 前缀的情况。
+            // 都匹配不到时取 fallback 的 0。
+            let normalized = normalize_href(&href);
+            let order = href_map
+                .get(&normalized)
+                .or_else(|| name_map.get(href_file_name(&normalized)))
+                .copied()
+                .unwrap_or(0);
             TocNode {
                 label: n.label.clone(),
                 href,
                 order,
                 level,
-                children: nav_to_toc(&n.children, level + 1, href_map),
+                children: nav_to_toc(&n.children, level + 1, href_map, name_map),
             }
         })
         .collect()
@@ -204,12 +230,16 @@ pub fn open(path_str: &str) -> Result<BookInfo, String> {
     //   2) 即便 playOrder 有值，也跟 spine 序号、过滤后的索引没有必然对应关系。
     // 我们改用 href 归一化匹配，把它映射到 filtered chapters 的索引。
     let mut href_map: HashMap<String, usize> = HashMap::with_capacity(chapters.len());
+    let mut name_map: HashMap<String, usize> = HashMap::with_capacity(chapters.len());
     for (idx, c) in chapters.iter().enumerate() {
         let key = c.href.replace('\\', "/").to_ascii_lowercase();
         // 如果出现重复 href，保留首个（后续同名章节无法跳转，但不会闪退）
-        href_map.entry(key).or_insert(idx);
+        href_map.entry(key.clone()).or_insert(idx);
+        name_map
+            .entry(href_file_name(&key).to_string())
+            .or_insert(idx);
     }
-    let toc = nav_to_toc(&doc.toc, 1, &href_map);
+    let toc = nav_to_toc(&doc.toc, 1, &href_map, &name_map);
 
     Ok(BookInfo {
         book_id: book_id_from_path(&path),

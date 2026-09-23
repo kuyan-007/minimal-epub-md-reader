@@ -104,7 +104,7 @@ bookId 由 `canonicalize().to_ascii_lowercase() → hash` 生成，保证同一�
 
 ### 安装
 
-下载 `极简EPUB MD 阅读器_0.1.0_x64-setup.exe`（NSIS 安装包），双击安装。安装时自动关联 `.epub` / `.md` 文件类型。
+下载 `极简EPUB MD 阅读器_1.8.0_x64-setup.exe`（NSIS 安装包），双击安装。安装时自动关联 `.epub` / `.md` 文件类型。
 
 或者直接运行 `minimal-epub-reader_vX.X.exe`（裸 exe，要求系统已装 WebView2 Runtime，Win11 自带）。
 
@@ -152,6 +152,27 @@ npm run build
 #   裸 exe:  src-tauri/target/release/minimal-epub-reader.exe
 #   NSIS:    src-tauri/target/release/bundle/nsis/*.exe
 ```
+
+> **中文路径注意**：项目若放在含中文的目录下，mingw 的 `dlltool` / `ld` 无法打开非 ASCII 路径，需在 `src-tauri/.cargo/config.toml` 里把 `build.target-dir` 指到纯 ASCII 目录（该文件是机器本地配置，不入库）。
+
+---
+
+## 更新日志
+
+### v1.8（2026-09-23）
+
+**新增**
+
+- **首页版本号**：主页标题后显示当前版本（如 `v1.8`）。版本取 `tauri.conf.json` 的 `version`，补丁号为 0 时省略
+
+**修复**
+
+- **竖排 EPUB 强制横排**：章节渲染时注入 `writing-mode: horizontal-tb !important`（覆盖 `body *`）。书自带 `html { writing-mode: vertical-rl }`（如《反脆弱》原版）时，此前会整章竖排，并连带让「一屏一页」的分页与进度失效
+- **阅读偏好恢复失效**：前端按 snake_case（`bg_index`）读取偏好，而后端 `Preferences` 序列化是 camelCase，导致背景 / 字号 / 字体选择重启后全部丢失
+- **开发构建修复（Windows / GNU 工具链）**：`cdylib` 在 mingw 下触发 GNU ld `export ordinal too large`，Windows 桌面端 `crate-type` 收敛为 `["staticlib", "rlib"]`；项目路径含中文时构建产物目录需指向纯 ASCII 路径
+- **版本号统一**：`tauri.conf.json` / `package.json` / `Cargo.toml` / `package-lock.json` 统一为 `1.8.0`；GitHub 发布脚本的 tag、README 安装包名、issue 模板同步更正
+
+> 更早版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 ---
 

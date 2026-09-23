@@ -1,7 +1,7 @@
 {
   "name": "minimal-epub-reader",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.8.0",
   "description": "极简EPUB阅读器 - 可隐藏的浮动文本窗",
   "scripts": {
     "dev": "tauri dev",

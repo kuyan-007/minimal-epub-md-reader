@@ -1,6 +1,6 @@
 name: Release Windows
 
-# 推送形如 v1.2.3 的 tag 即触发：自动 cargo build + tauri build + 上传 NSIS 安装包
+# 推送形如 v1.8.0 的 tag 即触发：自动 cargo build + tauri build + 上传 NSIS 安装包
 on:
   push:
     tags:

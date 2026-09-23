@@ -27,7 +27,7 @@ assignees: ''
 ## 环境
 
 - Windows 版本: [e.g. Windows 11 23H2]
-- 应用版本: [e.g. v1.2]
+- 应用版本: [e.g. v1.8]
 - WebView2 Runtime 版本（如可查询）
 
 ## 附加信息

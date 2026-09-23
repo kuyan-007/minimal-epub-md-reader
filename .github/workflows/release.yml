@@ -54,3 +54,16 @@ jobs:
           prerelease: false
           # Tauri 会在 src-tauri/tauri.conf.json 读取 productName / version
           # 产物是 NSIS 安装包 + 可执行 exe，会自动附加到 GitHub Release
+
+      # 单文件便携 exe：MSVC 构建下 WebView2Loader 是静态链接的，
+      # 这份 exe 不依赖任何外部 DLL（只要求系统已装 WebView2 Runtime）。
+      - name: Attach portable single-file exe
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          EXE=src-tauri/target/release/minimal-epub-reader.exe
+          ls -l "$EXE"
+          cp "$EXE" "minimal-epub-reader_v${VER}.exe"
+          gh release upload "${{ github.ref_name }}" "minimal-epub-reader_v${VER}.exe" --clobber

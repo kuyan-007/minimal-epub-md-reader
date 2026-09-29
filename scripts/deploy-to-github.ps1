@@ -43,10 +43,12 @@ Write-Host "==> 推送 main 分支..." -ForegroundColor Yellow
 git push -u origin main
 if ($LASTEXITCODE -ne 0) { exit 1 }
 
-# 4) 创建并推送 v1.8.0 tag（触发 GitHub Actions 自动出 release）
-Write-Host "==> 创建并推送 tag v1.8.0（触发 release 工作流）..." -ForegroundColor Yellow
-git tag v1.8.0 2>$null
-git push origin v1.8.0
+# 4) 根据 package.json 创建并推送版本 tag（触发 GitHub Actions 发布）
+$version = (Get-Content -Raw -Encoding UTF8 package.json | ConvertFrom-Json).version
+$tag = "v$version"
+Write-Host "==> 创建并推送 tag $tag（触发 release 工作流）..." -ForegroundColor Yellow
+git tag $tag 2>$null
+git push origin $tag
 if ($LASTEXITCODE -ne 0) { exit 1 }
 
 Write-Host ""

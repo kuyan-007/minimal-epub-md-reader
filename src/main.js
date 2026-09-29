@@ -1,3 +1,5 @@
+import { renderFlowcharts } from "./flowchart.mjs";
+
 // ============================================================
 // 极简EPUB阅读器 - 前端入口
 // 功能：目录 + 背景选择 + 阅读进度（严格按需求，无字体调节）
@@ -286,6 +288,7 @@ function renderChapter(order) {
 			state.currentDoc = doc;
 			const root = doc.documentElement;
 			const scrollEl = doc.scrollingElement || root;
+			if (state.isMd) renderFlowcharts(doc);
 
 			// 处理图片
 			const imgs = Array.from(doc.querySelectorAll("img"));
@@ -388,6 +391,11 @@ function renderChapter(order) {
 					.chapter-body img, .chapter-body table, .chapter-body pre {
 						max-width: 100%;
 					}
+					.flowchart-wrapper { overflow-x: auto; margin: 1em 0; }
+					.flowchart { display: block; width: 100%; max-height: 70vh; min-width: 400px; }
+					.flow-node rect, .flow-node polygon { fill: var(--bg-overlay); stroke: var(--accent); stroke-width: 2; }
+					.flow-node text, .flow-edge-label { fill: var(--text); font: 14px sans-serif; }
+					.flow-edges line { stroke: var(--accent); stroke-width: 2; }
 
 					/* ── Markdown 元素样式 ── */
 					/* 标题 */

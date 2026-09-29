@@ -17,6 +17,7 @@
 - **双格式**：原生支持 EPUB（用 `epub` crate 解析）与 Markdown（用 `pulldown-cmark`）
 - **100% 保留原格式**：章节用 `<iframe srcdoc>` 渲染，EPUB 自带的 CSS / 图片 / 字体原样呈现
 - **MD 公式渲染**：服务端接入 KaTeX，`$...$` / `$$...$$` 行内与块级 LaTeX 直接渲染；CSS + 20 个字体编译进二进制，零运行时资源依赖
+- **MD 流程图**：`mermaid` 代码块支持 `flowchart TD/TB/LR`、节点、判断框、分支标签和连续箭头；在本地生成 SVG
 - **5 套背景主题**：米黄 / 纯白 / 护眼绿 / 深灰 / 纯黑（AMOLED 友好），CSS 变量驱动，秒切
 - **4 套字体预设**：默认思源宋体 / 霞鹜文楷 / 思源黑体 / 微软雅黑，仅作用于 MD 章节
 - **三路径统一入口**：双击文件 / 单实例唤起 / 拖入窗口，最终都走同一个 `enqueue_pending_file`
@@ -104,7 +105,7 @@ bookId 由 `canonicalize().to_ascii_lowercase() → hash` 生成，保证同一�
 
 ### 安装
 
-下载 `极简EPUB MD 阅读器_1.8.0_x64-setup.exe`（NSIS 安装包），双击安装。安装时自动关联 `.epub` / `.md` 文件类型。
+下载 `极简EPUB MD 阅读器_1.9.0_x64-setup.exe`（NSIS 安装包），双击安装。安装时自动关联 `.epub` / `.md` 文件类型。
 
 或者直接运行 `minimal-epub-reader_vX.X.exe`（裸 exe，要求系统已装 WebView2 Runtime，Win11 自带）。
 
@@ -158,6 +159,11 @@ npm run build
 ---
 
 ## 更新日志
+
+### v1.9（2026-09-29）
+
+- Markdown `mermaid` 代码块可渲染流程图，支持 `flowchart TD/TB/LR`、判断框、分支标签及连续箭头；无法识别的语法保留源代码。
+- 提供单文件便携 exe、zip 压缩包及 NSIS 安装包。
 
 ### v1.8（2026-09-23）
 

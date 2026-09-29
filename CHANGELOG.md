@@ -7,7 +7,12 @@
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-09-29
+
 ### 新增
+
+- Markdown 中的 `mermaid` 流程图代码块在本地渲染为 SVG。支持 `flowchart TD/TB/LR`、普通节点、判断框、分支标签及连续箭头；不支持的语法保留源代码。
+- 发布单文件便携 exe、zip 压缩包和 NSIS 安装包。
 
 - **MD 公式渲染**：接入 `katex-rs` v0.2.4，pulldown-cmark 启 `ENABLE_MATH` 后拦截 `InlineMath` / `DisplayMath` 事件 → katex 渲染为 HTML。检测到公式才在章节 HTML 头部插入 KaTeX CSS（20 个 woff2 字体已 base64 内嵌为 data URI，零运行时资源依赖）
 - **语法覆盖**：`$...$` / `$$...$$` 行内与块级 LaTeX。常见矩阵、积分、求和、希腊字母、化学式均可
